@@ -1,0 +1,9 @@
+hw4: hw4.cpp vshader1.glsl fshader1.glsl Angel.h CheckError.h mat.h vec.h\
+		textfile.h textfile.cpp InitShader.cpp Mesh.hpp PLYReader.hpp\
+		MeshRenderer.hpp LSystemReader.hpp LSystem.hpp ReaderException.hpp\
+		LSystemRenderer.hpp Scene.hpp
+	cl /EHsc hw4.cpp glew32s.lib
+
+clean:
+	del hw4.exe *.obj
+
