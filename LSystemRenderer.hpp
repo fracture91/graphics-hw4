@@ -166,9 +166,8 @@ class LSystemRenderer {
 			colors.push_back(randomColor());
 		}
 
-		void showAllSystemsRandomly(vec4 min, vec4 max) {
-			randomRange[0] = min;
-			randomRange[1] = max;
+		// show all systems randomly within the volume set previously
+		void showAllSystemsRandomly() {
 			systemsToDraw.clear();
 			startPoints.clear();
 			colors.clear();
@@ -177,6 +176,13 @@ class LSystemRenderer {
 				startPoints.push_back(randomPoint());
 				colors.push_back(randomColor());
 			}
+		}
+
+		// show all systems randomly within the given volume
+		void showAllSystemsRandomly(vec4 min, vec4 max) {
+			randomRange[0] = min;
+			randomRange[1] = max;
+			showAllSystemsRandomly();
 		}
 
 		bool forestMode() {

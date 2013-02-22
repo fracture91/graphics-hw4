@@ -64,17 +64,8 @@ void keyboard(unsigned char key, int x, int y) {
 		case 27: // ESC
 			exit(EXIT_SUCCESS);
 			break;
-		case 'a':
-		case 'b':
-		case 'c':
-		case 'd':
-		case 'e':
-			lsysRenderer->showOneSystem(key - 'a');
-			break;
-		case 'f':
-			vec3 max(10, 0, 10);
-			vec3 min(-30, 0, -30);
-			lsysRenderer->showAllSystemsRandomly(min, max);
+		case 'r':
+			lsysRenderer->showAllSystemsRandomly();
 			break;
 	}
 	glutPostRedisplay();
@@ -139,7 +130,12 @@ int main(int argc, char **argv) {
 
 	srand(time(NULL));
 	lsystems[0]->print();
+	
 	lsysRenderer = new LSystemRenderer(program, lsystems);
+	vec3 max(10, 0, 10);
+	vec3 min(-30, 0, -30);
+	lsysRenderer->showAllSystemsRandomly(min, max);
+	
 	scene = new Scene(program, *lsysRenderer);
 	scene->bufferPoints();
 	// assign handlers
