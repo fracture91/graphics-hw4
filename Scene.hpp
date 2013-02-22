@@ -4,25 +4,69 @@
 
 #include "LSystemRenderer.hpp"
 
+class Camera {
+	private:
+		vec3 eye;
+		vec3 u, v, n;
+		mat4 viewMatrix;
+
+		// should be called after eye, u, v, n change
+		void updateViewMatrix() {
+			viewMatrix = mat4();
+			viewMatrix[0] = vec4(u, -dot(eye, u));
+			viewMatrix[1] = vec4(v, -dot(eye, v));
+			viewMatrix[2] = vec4(n, -dot(eye, n));
+		}
+
+	public:
+		enum Axis { U, V, N };
+		Camera() {
+			viewMatrix = mat4();
+			eye = vec3(0);
+			u = vec3(1, 0, 0);
+			v = vec3(0, 1, 0);
+			n = vec3(0, 0, 1);
+		}
+
+		void lookAt(vec3 eye, vec3 at, vec3 up) {
+			mat4 view = LookAt(eye, at, up);
+			this->eye = eye;
+			u = vec3(view[0].x, view[0].y, view[0].z);
+			v = vec3(view[1].x, view[1].y, view[1].z);
+			n = vec3(view[2].x, view[2].y, view[2].z);
+			viewMatrix = view;
+		}
+
+		mat4 getViewMatrix() {
+			return viewMatrix;
+		}
+
+		void slide(vec3 delta) {
+			mat3 uvn = transpose(mat3(u, v, n));
+			eye += uvn * delta;
+			updateViewMatrix();
+		}
+};
+
 class Scene {
 	private:
 		int screenWidth;
 		int screenHeight;
-		mat4 projection;
+		mat4 perspective;
+		Camera camera;
 		GLuint program;
 		vector<Mesh*> meshes;
 		Mesh* cow;
 		Mesh* car;
 		Mesh* ground;
 		
-		void resetProjection() {
+		void updatePerspective() {
 			if(screenHeight == 0) {
-				projection = mat4(); // don't want to divide by zero...
+				perspective = mat4(); // don't want to divide by zero...
 				return;
 			}
-			projection = mat4()
-				* Perspective(90, (float)screenWidth/screenHeight, 0.0000001, 100000)
-				* LookAt(vec3(20, 50, 20), vec3(-20, 20, -20), vec3(0, 1, 0));
+			perspective = mat4()
+				* Perspective(90, (float)screenWidth/screenHeight, 0.0000001, 100000);
 		}
 
 		// returns next empty space in buffer
@@ -73,7 +117,8 @@ class Scene {
 			}
 			meshes.push_back(ground);
 
-			resetProjection();
+			camera.lookAt(vec3(20, 50, 20), vec3(-20, 20, -20), vec3(0, 1, 0));
+			updatePerspective();
 		}
 
 		void bufferPoints() {
@@ -98,7 +143,7 @@ class Scene {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			glEnable(GL_DEPTH_TEST);
 			GLuint projLoc = glGetUniformLocationARB(program, "projection_matrix");
-			glUniformMatrix4fv(projLoc, 1, GL_TRUE, projection);
+			glUniformMatrix4fv(projLoc, 1, GL_TRUE, perspective * camera.getViewMatrix());
 			
 			if(lsysRenderer.forestMode()) {
 				GLuint colorLoc = glGetUniformLocationARB(program, "inColor");
@@ -133,7 +178,11 @@ class Scene {
 			this->screenWidth = screenWidth;
 			this->screenHeight = screenHeight;
 			glViewport(0, 0, screenWidth, screenHeight);
-			resetProjection();
+			updatePerspective();
+		}
+
+		Camera& getCamera() {
+			return camera;
 		}
 };
 

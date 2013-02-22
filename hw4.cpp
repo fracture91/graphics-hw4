@@ -60,11 +60,32 @@ void reshape(int screenWidth, int screenHeight) {
 
 // keyboard handler
 void keyboard(unsigned char key, int x, int y) {
+	// always use uppercase to simplify the switch
+	bool lowercase = key > 96 && key < 123;
+	if(lowercase) {
+		key -= 32;
+	}
+
 	switch (key) {
 		case 27: // ESC
 			exit(EXIT_SUCCESS);
 			break;
-		case 'r':
+		case 'T':
+		case 'V':
+		case 'U': {
+			float slideAmount = lowercase ? -1 : 1;
+			vec3 delta = vec3(0);
+			if(key == 'T') {
+				delta.x = slideAmount;
+			} else if(key == 'V') {
+				delta.y = slideAmount;
+			} else if(key == 'U') {
+				delta.z = slideAmount;
+			}
+			scene->getCamera().slide(delta);
+			break;
+		}
+		case 'R':
 			lsysRenderer->showAllSystemsRandomly();
 			break;
 	}
