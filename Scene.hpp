@@ -13,6 +13,7 @@ class Scene {
 		vector<Mesh*> meshes;
 		Mesh* cow;
 		Mesh* car;
+		Mesh* ground;
 		
 		void resetProjection() {
 			if(screenHeight == 0) {
@@ -44,20 +45,43 @@ class Scene {
 			
 			PLYReader cowReader("meshes/cow.ply");
 			cow = cowReader.read();
+			meshes.push_back(cow);
 
 			PLYReader carReader("meshes/big_porsche.ply");
 			car = carReader.read();
-
 			meshes.push_back(car);
-			meshes.push_back(cow);
+
+			// our randomly placed trees and floor plane will be in this volume
+			vec3 max(10, 0, 10);
+			vec3 min(-30, 0, -30);
+			lsysRenderer.showAllSystemsRandomly(min, max);
+
+			// use the bounding box to generate a cube, then make a Mesh out of it
+			BoundingBox* box = new BoundingBox(min);
+			box->addContainedVertex(max);
+
+			// less efficient since we'll have duplicate vertices... oh well
+			ground = new Mesh("ground", box->getNumPoints());
+			int numTriangles = box->getNumPoints() / 3;
+			ground->startTriangles(numTriangles);
+			for(int i = 0; i < numTriangles; i++) {
+				int pointIndex = i * 3;
+				for(int j = 0; j < 3; j++) {
+					ground->addVertex(box->getPoints()[pointIndex + j]);
+				}
+				ground->addTriangle(pointIndex, pointIndex + 1, pointIndex + 2);
+			}
+			meshes.push_back(ground);
 
 			resetProjection();
 		}
 
 		void bufferPoints() {
 			GLsizeiptr totalBytes = lsysRenderer.getTotalBytes();
-			totalBytes += cow->getNumBytes();
-			totalBytes += car->getNumBytes();
+			for (vector<Mesh*>::const_iterator i = meshes.begin(); i != meshes.end(); ++i) {
+				totalBytes += (*i)->getNumBytes();
+			}
+
 			glBufferData(GL_ARRAY_BUFFER, totalBytes, NULL, GL_STATIC_DRAW);
 
 			GLuint bufferStart = bufferMeshes(0, &meshes);
@@ -71,20 +95,27 @@ class Scene {
 		void display() {
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			glEnable(GL_DEPTH_TEST);
 			GLuint projLoc = glGetUniformLocationARB(program, "projection_matrix");
 			glUniformMatrix4fv(projLoc, 1, GL_TRUE, projection);
 			
 			if(lsysRenderer.forestMode()) {
 				GLuint colorLoc = glGetUniformLocationARB(program, "inColor");
-				glUniform4fv(colorLoc, 1, vec4(1,1,1,1));
-
 				GLuint modelLoc = glGetUniformLocationARB(program, "model_matrix");
+
+
+				glUniform4fv(colorLoc, 1, vec4(0.5, 1, 0.5, 1));
+				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, mat4());
+				glDrawArrays(GL_TRIANGLES, ground->getDrawOffset(), ground->getNumPoints());
+
+				glUniform4fv(colorLoc, 1, vec4(1, 1, 1, 1));
+
 				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, Scale(3));
 				glDrawArrays(GL_TRIANGLES, cow->getDrawOffset(), cow->getNumPoints());
 
-				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, Translate(-20, 0, -10) * RotateY(-60));
+				float yAdjust = -1 * car->getBoundingBox()->getMin().y;
+				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, RotateY(-60) * Translate(-25, yAdjust, 0));
 				glDrawArrays(GL_TRIANGLES, car->getDrawOffset(), car->getNumPoints());
 			}
 

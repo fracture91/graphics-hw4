@@ -132,9 +132,6 @@ int main(int argc, char **argv) {
 	lsystems[0]->print();
 	
 	lsysRenderer = new LSystemRenderer(program, lsystems);
-	vec3 max(10, 0, 10);
-	vec3 min(-30, 0, -30);
-	lsysRenderer->showAllSystemsRandomly(min, max);
 	
 	scene = new Scene(program, *lsysRenderer);
 	scene->bufferPoints();
