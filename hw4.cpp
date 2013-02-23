@@ -94,6 +94,9 @@ void keyboard(unsigned char key, int x, int y) {
 		case 'L':
 			scene->getCamera().pitch(2 * lowercase ? -1 : 1);
 			break;
+		case 'A':
+			scene->toggleGrass();
+			break;
 		case 'R':
 			lsysRenderer->showAllSystemsRandomly();
 			break;

@@ -3,6 +3,7 @@
 #define __SCENE_H_
 
 #include "LSystemRenderer.hpp"
+#include "bmpread.c"
 
 // defines a camera whose coordinate system is along u/v/n axes
 // (rather than x/y/z) at eye position
@@ -101,7 +102,9 @@ class Scene {
 		Mesh* cow;
 		Mesh* car;
 		Mesh* ground;
-		
+		GLuint textures[2];
+		bool showGrass;
+
 		void updatePerspective() {
 			if(screenHeight == 0) {
 				perspective = mat4(); // don't want to divide by zero...
@@ -123,12 +126,46 @@ class Scene {
 			return bufferStart;
 		}
 
+		void assignTexture(string path, GLuint texName) {
+			bmpread_t bitmap;
+			if(!bmpread(path.c_str(), 0, &bitmap)) {
+				throw runtime_error("failed to load texture: " + path);
+			}
+			glBindTexture(GL_TEXTURE_2D, texName);
+
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bitmap.width, bitmap.height, 0,
+					GL_RGB, GL_UNSIGNED_BYTE, bitmap.rgb_data);
+			bmpread_free(&bitmap);
+		}
+
+		void setUpTextures() {
+			glActiveTexture(GL_TEXTURE0);
+			glGenTextures(2, textures);
+
+			glUniform1i(glGetUniformLocation(program, "texture"), 0);
+
+			// just reuse the vertex as a texture coord
+			GLuint vTexCoord = glGetAttribLocation(program, "vTexCoord");
+			glEnableVertexAttribArray(vTexCoord);
+			glVertexAttribPointer(vTexCoord, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+			assignTexture("textures/grass.bmp", textures[0]);
+			assignTexture("textures/stones.bmp", textures[1]);
+			showGrass = false;
+			toggleGrass();
+		}
+
 	public:
 		LSystemRenderer& lsysRenderer;
-		
+
 		Scene(GLuint program, LSystemRenderer& lr):lsysRenderer(lr) {
 			this->program = program;
-			
+
 			PLYReader cowReader("meshes/cow.ply");
 			cow = cowReader.read();
 			meshes.push_back(cow);
@@ -159,6 +196,7 @@ class Scene {
 			}
 			meshes.push_back(ground);
 
+			setUpTextures();
 			camera.lookAt(vec3(20, 50, 20), vec3(-20, 20, -20), vec3(0, 1, 0));
 			updatePerspective();
 		}
@@ -173,7 +211,7 @@ class Scene {
 
 			GLuint bufferStart = bufferMeshes(0, &meshes);
 			bufferStart = bufferMeshes(bufferStart, lsysRenderer.getMeshes());
-			
+
 			GLuint posLoc = glGetAttribLocation(program, "vPosition");
 			glEnableVertexAttribArray(posLoc);
 			glVertexAttribPointer(posLoc, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
@@ -181,20 +219,22 @@ class Scene {
 
 		void display() {
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			
+
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			glEnable(GL_DEPTH_TEST);
 			GLuint projLoc = glGetUniformLocationARB(program, "projection_matrix");
 			glUniformMatrix4fv(projLoc, 1, GL_TRUE, perspective * camera.getViewMatrix());
-			
+
 			if(lsysRenderer.forestMode()) {
 				GLuint colorLoc = glGetUniformLocationARB(program, "inColor");
 				GLuint modelLoc = glGetUniformLocationARB(program, "model_matrix");
+				GLuint useTextureLoc = glGetUniformLocationARB(program, "useTexture");
 
-
+				glUniform1i(useTextureLoc, true);
 				glUniform4fv(colorLoc, 1, vec4(0.5, 1, 0.5, 1));
 				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, mat4());
 				glDrawArrays(GL_TRIANGLES, ground->getDrawOffset(), ground->getNumPoints());
+				glUniform1i(useTextureLoc, false);
 
 				glUniform4fv(colorLoc, 1, vec4(1, 1, 1, 1));
 
@@ -225,6 +265,11 @@ class Scene {
 
 		Camera& getCamera() {
 			return camera;
+		}
+
+		void toggleGrass() {
+			showGrass = !showGrass;
+			glBindTexture(GL_TEXTURE_2D, showGrass ? textures[0] : textures[1]);
 		}
 };
 
