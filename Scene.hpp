@@ -4,6 +4,8 @@
 
 #include "LSystemRenderer.hpp"
 
+// defines a camera whose coordinate system is along u/v/n axes
+// (rather than x/y/z) at eye position
 class Camera {
 	private:
 		vec3 eye;
@@ -18,6 +20,12 @@ class Camera {
 			viewMatrix[2] = vec4(n, -dot(eye, n));
 		}
 
+		void updateUVN() {
+			u = vec3(viewMatrix[0].x, viewMatrix[0].y, viewMatrix[0].z);
+			v = vec3(viewMatrix[1].x, viewMatrix[1].y, viewMatrix[1].z);
+			n = vec3(viewMatrix[2].x, viewMatrix[2].y, viewMatrix[2].z);
+		}
+
 	public:
 		enum Axis { U, V, N };
 		Camera() {
@@ -29,12 +37,9 @@ class Camera {
 		}
 
 		void lookAt(vec3 eye, vec3 at, vec3 up) {
-			mat4 view = LookAt(eye, at, up);
 			this->eye = eye;
-			u = vec3(view[0].x, view[0].y, view[0].z);
-			v = vec3(view[1].x, view[1].y, view[1].z);
-			n = vec3(view[2].x, view[2].y, view[2].z);
-			viewMatrix = view;
+			viewMatrix = LookAt(eye, at, up);
+			updateUVN();
 		}
 
 		mat4 getViewMatrix() {
@@ -45,6 +50,43 @@ class Camera {
 			mat3 uvn = transpose(mat3(u, v, n));
 			eye += uvn * delta;
 			updateViewMatrix();
+		}
+
+		void rotate(Axis axis, float degrees) {
+			float rads = DegreesToRadians * degrees;
+			float c = cos(rads);
+			float s = sin(rads);
+			mat3 newUVN(u, v, n);
+			switch(axis) {
+				case U:
+					newUVN[1] = vec3(c*v + s*n);
+					newUVN[2] = vec3(-s*v + c*n);
+					break;
+				case V:
+					newUVN[0] = vec3(c*u - s*n);
+					newUVN[2] = vec3(s*u + c*n);
+					break;
+				case N:
+					newUVN[0] = vec3(c*u + s*v);
+					newUVN[1] = vec3(-s*u + c*v);
+					break;
+			}
+			u = newUVN[0];
+			v = newUVN[1];
+			n = newUVN[2];
+			updateViewMatrix();
+		}
+
+		void pitch(float degrees) {
+			rotate(U, degrees);
+		}
+
+		void yaw(float degrees) {
+			rotate(V, degrees);
+		}
+
+		void roll(float degrees) {
+			rotate(N, degrees);
 		}
 };
 

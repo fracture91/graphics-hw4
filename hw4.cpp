@@ -85,6 +85,15 @@ void keyboard(unsigned char key, int x, int y) {
 			scene->getCamera().slide(delta);
 			break;
 		}
+		case 'J':
+			scene->getCamera().yaw(2 * lowercase ? -1 : 1);
+			break;
+		case 'K':
+			scene->getCamera().roll(2 * lowercase ? -1 : 1);
+			break;
+		case 'L':
+			scene->getCamera().pitch(2 * lowercase ? -1 : 1);
+			break;
 		case 'R':
 			lsysRenderer->showAllSystemsRandomly();
 			break;
