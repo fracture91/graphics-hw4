@@ -97,6 +97,9 @@ void keyboard(unsigned char key, int x, int y) {
 		case 'A':
 			scene->toggleGrass();
 			break;
+		case 'D':
+			scene->toggleShadows();
+			break;
 		case 'R':
 			lsysRenderer->showAllSystemsRandomly();
 			break;

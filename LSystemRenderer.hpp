@@ -76,7 +76,7 @@ class LSystemRenderer {
 		}
 
 		// draw the given lsystem starting at the given position
-		void drawSystem(LSystem* sys, vec4 startPoint, vec4 color) {
+		void drawSystem(LSystem* sys, vec4 startPoint, vec4 color, bool setColor) {
 			Turtle* turtle = sys->getTurtleCopy();
 			stack<mat4> modelView;
 			// move to start point and point the tree upwards
@@ -84,8 +84,10 @@ class LSystemRenderer {
 			turtle->ctm = &modelView;
 			string turtleString = sys->getTurtleString();
 
-			GLuint colorLoc = glGetUniformLocationARB(program, "inColor");
-			glUniform4fv(colorLoc, 1, color);
+			if(setColor) {
+				GLuint colorLoc = glGetUniformLocationARB(program, "inColor");
+				glUniform4fv(colorLoc, 1, color);
+			}
 
 			for(string::iterator it = turtleString.begin(); it != turtleString.end(); ++it) {
 				char currentChar = *it;
@@ -149,11 +151,11 @@ class LSystemRenderer {
 			showOneSystem(0);
 		}
 
-		void display() {
+		void display(bool setColor = true) {
 			vec4 startPoint(0, 0, 0, 1);
 			for (vector<LSystem*>::const_iterator i = systemsToDraw.begin(); i != systemsToDraw.end(); ++i) {
 				int index = i - systemsToDraw.begin();
-				drawSystem(*i, startPoints[index], colors[index]);
+				drawSystem(*i, startPoints[index], colors[index], setColor);
 			}
 		}
 

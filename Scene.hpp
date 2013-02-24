@@ -96,6 +96,8 @@ class Scene {
 		int screenWidth;
 		int screenHeight;
 		mat4 perspective;
+		mat4 shadow;
+		bool showShadows;
 		Camera camera;
 		GLuint program;
 		vector<Mesh*> meshes;
@@ -160,6 +162,25 @@ class Scene {
 			toggleGrass();
 		}
 
+		// use the shadow matrix in the shader, or not (ignored if !showShadows)
+		void setUseShadow(bool use) {
+			static vec4 oldColor;
+			static bool oldUseState = false;
+			// need to backup/restore old color being used
+			if(use != oldUseState) {
+				GLuint colorLoc = glGetUniformLocationARB(program, "inColor");
+				if(use) {
+					glGetUniformfv(program, colorLoc, oldColor);
+					glUniform4fv(colorLoc, 1, vec4(0, 0, 0, 1)); // render shadow as black
+				} else {
+					glUniform4fv(colorLoc, 1, oldColor);
+				}
+				oldUseState = use;
+			}
+			GLuint shadowLoc = glGetUniformLocationARB(program, "shadow_matrix");
+			glUniformMatrix4fv(shadowLoc, 1, GL_TRUE, use && showShadows ? shadow : mat4());
+		}
+
 	public:
 		LSystemRenderer& lsysRenderer;
 
@@ -199,6 +220,14 @@ class Scene {
 			setUpTextures();
 			camera.lookAt(vec3(20, 50, 20), vec3(-20, 20, -20), vec3(0, 1, 0));
 			updatePerspective();
+
+			showShadows = true;
+			vec3 light(5000, 10000, 0);
+			mat4 m;
+			// put shadow .01 above ground to avoid z fighting
+			m[3].y = -1.0 / (light.y - 0.01);
+			m[3].w = 0;
+			shadow = Translate(light) * m * Translate(-light);
 		}
 
 		void bufferPoints() {
@@ -224,6 +253,7 @@ class Scene {
 			glEnable(GL_DEPTH_TEST);
 			GLuint projLoc = glGetUniformLocationARB(program, "projection_matrix");
 			glUniformMatrix4fv(projLoc, 1, GL_TRUE, perspective * camera.getViewMatrix());
+			setUseShadow(false);
 
 			if(lsysRenderer.forestMode()) {
 				GLuint colorLoc = glGetUniformLocationARB(program, "inColor");
@@ -240,13 +270,23 @@ class Scene {
 
 				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, Scale(3));
 				glDrawArrays(GL_TRIANGLES, cow->getDrawOffset(), cow->getNumPoints());
+				setUseShadow(true); // draw again with shadows
+				glDrawArrays(GL_TRIANGLES, cow->getDrawOffset(), cow->getNumPoints());
+				setUseShadow(false);
+
 
 				float yAdjust = -1 * car->getBoundingBox()->getMin().y;
 				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, RotateY(-60) * Translate(-25, yAdjust, 0));
 				glDrawArrays(GL_TRIANGLES, car->getDrawOffset(), car->getNumPoints());
+				setUseShadow(true);
+				glDrawArrays(GL_TRIANGLES, car->getDrawOffset(), car->getNumPoints());
+				setUseShadow(false);
 			}
 
 			lsysRenderer.display();
+			setUseShadow(true);
+			lsysRenderer.display(false); // make sure it doesn't override shadow color
+			setUseShadow(false);
 
 
 			glDisable(GL_DEPTH_TEST); 
@@ -270,6 +310,10 @@ class Scene {
 		void toggleGrass() {
 			showGrass = !showGrass;
 			glBindTexture(GL_TEXTURE_2D, showGrass ? textures[0] : textures[1]);
+		}
+
+		void toggleShadows() {
+			showShadows = !showShadows;
 		}
 };
 
