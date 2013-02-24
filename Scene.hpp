@@ -98,6 +98,7 @@ class Scene {
 		mat4 perspective;
 		mat4 shadow;
 		bool showShadows;
+		bool useExponentialFog;
 		Camera camera;
 		GLuint program;
 		vector<Mesh*> meshes;
@@ -221,6 +222,9 @@ class Scene {
 			camera.lookAt(vec3(20, 50, 20), vec3(-20, 20, -20), vec3(0, 1, 0));
 			updatePerspective();
 
+			useExponentialFog = true;
+			toggleExponentialFog(); // set to linear by default
+
 			showShadows = true;
 			vec3 light(5000, 10000, 0);
 			mat4 m;
@@ -314,6 +318,11 @@ class Scene {
 
 		void toggleShadows() {
 			showShadows = !showShadows;
+		}
+
+		void toggleExponentialFog() {
+			useExponentialFog = !useExponentialFog;
+			glUniform1i(glGetUniformLocationARB(program, "useExponentialFog"), useExponentialFog);
 		}
 };
 

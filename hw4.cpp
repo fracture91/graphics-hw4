@@ -100,6 +100,9 @@ void keyboard(unsigned char key, int x, int y) {
 		case 'D':
 			scene->toggleShadows();
 			break;
+		case 'F':
+			scene->toggleExponentialFog();
+			break;
 		case 'R':
 			lsysRenderer->showAllSystemsRandomly();
 			break;
